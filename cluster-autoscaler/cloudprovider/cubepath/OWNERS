@@ -1,0 +1,7 @@
+approvers:
+- cubepath-dev
+reviewers:
+- cubepath-dev
+
+labels:
+- area/provider/cubepath

@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+  labels:
+    app: cluster-autoscaler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-autoscaler
+  template:
+    metadata:
+      labels:
+        app: cluster-autoscaler
+    spec:
+      serviceAccountName: cluster-autoscaler
+      containers:
+        - name: cluster-autoscaler
+          image: ghcr.io/cubepathinc/cluster-autoscaler:latest
+          args:
+            - --cloud-provider=cubepath
+            - --v=4
+            - --stderrthreshold=info
+            - --skip-nodes-with-local-storage=false
+            - --skip-nodes-with-system-pods=false
+          env:
+            - name: CUBEPATH_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-autoscaler-cubepath
+                  key: token
+            - name: CUBEPATH_CLUSTER_UUID
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-autoscaler-cubepath
+                  key: cluster-uuid
+          resources:
+            requests:
+              cpu: 100m
+              memory: 300Mi
+            limits:
+              cpu: 100m
+              memory: 300Mi

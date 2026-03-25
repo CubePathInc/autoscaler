@@ -1,5 +1,5 @@
-//go:build !gce && !aws && !azure && !kubemark && !alicloud && !magnum && !digitalocean && !clusterapi && !huaweicloud && !ionoscloud && !linode && !hetzner && !bizflycloud && !brightbox && !equinixmetal && !oci && !vultr && !tencentcloud && !scaleway && !externalgrpc && !civo && !rancher && !volcengine && !baiducloud && !cherry && !cloudstack && !exoscale && !kamatera && !ovhcloud && !kwok
-// +build !gce,!aws,!azure,!kubemark,!alicloud,!magnum,!digitalocean,!clusterapi,!huaweicloud,!ionoscloud,!linode,!hetzner,!bizflycloud,!brightbox,!equinixmetal,!oci,!vultr,!tencentcloud,!scaleway,!externalgrpc,!civo,!rancher,!volcengine,!baiducloud,!cherry,!cloudstack,!exoscale,!kamatera,!ovhcloud,!kwok
+//go:build !gce && !aws && !azure && !kubemark && !alicloud && !magnum && !digitalocean && !clusterapi && !huaweicloud && !ionoscloud && !linode && !hetzner && !bizflycloud && !brightbox && !equinixmetal && !oci && !vultr && !tencentcloud && !scaleway && !externalgrpc && !civo && !rancher && !volcengine && !baiducloud && !cherry && !cloudstack && !exoscale && !kamatera && !ovhcloud && !kwok && !cubepath
+// +build !gce,!aws,!azure,!kubemark,!alicloud,!magnum,!digitalocean,!clusterapi,!huaweicloud,!ionoscloud,!linode,!hetzner,!bizflycloud,!brightbox,!equinixmetal,!oci,!vultr,!tencentcloud,!scaleway,!externalgrpc,!civo,!rancher,!volcengine,!baiducloud,!cherry,!cloudstack,!exoscale,!kamatera,!ovhcloud,!kwok,!cubepath
 
 /*
 Copyright 2018 The Kubernetes Authors.
@@ -29,6 +29,7 @@ import (
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/brightbox"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/cherryservers"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/civo"
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/cubepath"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/cloudstack"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/clusterapi"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/digitalocean"
@@ -85,6 +86,7 @@ var AvailableCloudProviders = []string{
 	cloudprovider.ScalewayProviderName,
 	cloudprovider.RancherProviderName,
 	cloudprovider.VolcengineProviderName,
+	cloudprovider.CubePathProviderName,
 }
 
 // DefaultCloudProvider is GCE.
@@ -153,6 +155,8 @@ func buildCloudProvider(opts config.AutoscalingOptions,
 		return rancher.BuildRancher(opts, do, rl)
 	case cloudprovider.VolcengineProviderName:
 		return volcengine.BuildVolcengine(opts, do, rl)
+	case cloudprovider.CubePathProviderName:
+		return cubepath.BuildCubePath(opts, do, rl)
 	}
 	return nil
 }
