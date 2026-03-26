@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"k8s.io/klog/v2"
 )
 
 type NodePool struct {
@@ -100,6 +102,11 @@ func (c *apiClient) do(method, path string, body interface{}) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
+	if resp.StatusCode == 409 {
+		klog.V(2).Infof("API returned 409 (busy), will retry next cycle: %s", string(respBody))
+		return nil, nil
+	}
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(respBody))
 	}
@@ -122,6 +129,7 @@ func (c *apiClient) ListNodePools() ([]NodePool, error) {
 }
 
 func (c *apiClient) ScaleNodePool(poolUUID string, desiredNodes int) error {
+	klog.V(4).Infof("Scaling pool %s to %d nodes", poolUUID, desiredNodes)
 	path := fmt.Sprintf("/kubernetes/%s/node-pools/%s", c.clusterID, poolUUID)
 	_, err := c.do(http.MethodPatch, path, map[string]int{"desired_nodes": desiredNodes})
 	return err
