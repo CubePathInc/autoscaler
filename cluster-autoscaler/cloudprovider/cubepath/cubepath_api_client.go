@@ -100,7 +100,7 @@ func (c *apiClient) do(method, path string, body interface{}) ([]byte, error) {
 }
 
 func (c *apiClient) ListNodePools() ([]NodePool, error) {
-	path := fmt.Sprintf("/k8s/clusters/%s/node-pools", c.clusterID)
+	path := fmt.Sprintf("/kubernetes/%s/node-pools/", c.clusterID)
 	data, err := c.do(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -113,14 +113,14 @@ func (c *apiClient) ListNodePools() ([]NodePool, error) {
 	return pools, nil
 }
 
-func (c *apiClient) ScaleNodePool(poolUUID string, count int) error {
-	path := fmt.Sprintf("/k8s/clusters/%s/node-pools/%s/scale", c.clusterID, poolUUID)
-	_, err := c.do(http.MethodPost, path, map[string]int{"count": count})
+func (c *apiClient) ScaleNodePool(poolUUID string, desiredNodes int) error {
+	path := fmt.Sprintf("/kubernetes/%s/node-pools/%s", c.clusterID, poolUUID)
+	_, err := c.do(http.MethodPatch, path, map[string]int{"desired_nodes": desiredNodes})
 	return err
 }
 
-func (c *apiClient) DeleteNode(poolUUID, nodeID string) error {
-	path := fmt.Sprintf("/k8s/clusters/%s/node-pools/%s/nodes/%s", c.clusterID, poolUUID, nodeID)
+func (c *apiClient) DeleteNode(poolUUID string, vpsID int) error {
+	path := fmt.Sprintf("/kubernetes/%s/node-pools/%s/nodes/%d", c.clusterID, poolUUID, vpsID)
 	_, err := c.do(http.MethodDelete, path, nil)
 	return err
 }

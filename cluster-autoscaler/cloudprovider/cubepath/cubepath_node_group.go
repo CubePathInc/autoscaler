@@ -18,6 +18,7 @@ package cubepath
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -77,8 +78,13 @@ func (n *cubePathNodeGroup) DeleteNodes(nodes []*apiv1.Node) error {
 			return fmt.Errorf("cannot determine node ID for %s", node.Name)
 		}
 
-		klog.V(4).Infof("Deleting node %s from pool %s", nodeID, n.nodePool.UUID)
-		err := n.manager.client.DeleteNode(n.nodePool.UUID, nodeID)
+		vpsID, err := strconv.Atoi(nodeID)
+		if err != nil {
+			return fmt.Errorf("invalid VPS ID %q for node %s: %v", nodeID, node.Name, err)
+		}
+
+		klog.V(4).Infof("Deleting node %s (VPS %d) from pool %s", node.Name, vpsID, n.nodePool.UUID)
+		err = n.manager.client.DeleteNode(n.nodePool.UUID, vpsID)
 		if err != nil {
 			return fmt.Errorf("failed to delete node %s: %v", nodeID, err)
 		}
