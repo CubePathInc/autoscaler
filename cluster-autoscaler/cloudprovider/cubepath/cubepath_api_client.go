@@ -31,6 +31,7 @@ type NodePool struct {
 	DesiredNodes int      `json:"desired_nodes"`
 	MinNodes     int      `json:"min_nodes"`
 	MaxNodes     int      `json:"max_nodes"`
+	AutoScale    bool     `json:"auto_scale"`
 	Nodes        []Worker `json:"nodes"`
 }
 

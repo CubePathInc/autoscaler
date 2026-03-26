@@ -71,12 +71,16 @@ func (m *cubePathManager) Refresh() error {
 		return fmt.Errorf("failed to list node pools: %v", err)
 	}
 
-	m.nodePools = make([]*NodePool, len(pools))
+	m.nodePools = make([]*NodePool, 0, len(pools))
 	for i := range pools {
-		m.nodePools[i] = &pools[i]
+		if !pools[i].AutoScale {
+			klog.V(4).Infof("Skipping node pool %s (%s): auto_scale disabled", pools[i].UUID, pools[i].Name)
+			continue
+		}
+		m.nodePools = append(m.nodePools, &pools[i])
 	}
 
-	klog.V(4).Infof("Refreshed %d node pools from CubePath API", len(m.nodePools))
+	klog.V(4).Infof("Refreshed %d autoscalable node pools from CubePath API", len(m.nodePools))
 	return nil
 }
 
