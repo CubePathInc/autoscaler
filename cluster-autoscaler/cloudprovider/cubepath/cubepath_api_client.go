@@ -25,23 +25,30 @@ import (
 )
 
 type NodePool struct {
-	UUID      string `json:"uuid"`
-	Name      string `json:"name"`
-	MinSize   int    `json:"min_size"`
-	MaxSize   int    `json:"max_size"`
-	Count     int    `json:"count"`
-	PlanSlug  string `json:"plan_slug"`
-	PlanVCPUs int    `json:"plan_vcpus"`
-	PlanRAM   int    `json:"plan_ram_mb"`
-	PlanDisk  int    `json:"plan_disk_gb"`
-	Nodes     []Node `json:"nodes"`
+	UUID         string   `json:"uuid"`
+	Name         string   `json:"name"`
+	Plan         Plan     `json:"plan"`
+	DesiredNodes int      `json:"desired_nodes"`
+	MinNodes     int      `json:"min_nodes"`
+	MaxNodes     int      `json:"max_nodes"`
+	Nodes        []Worker `json:"nodes"`
 }
 
-type Node struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	ProviderID string `json:"provider_id"`
-	Status     string `json:"status"`
+type Plan struct {
+	ID           int     `json:"id"`
+	Name         string  `json:"name"`
+	RAM          int     `json:"ram"`
+	CPU          int     `json:"cpu"`
+	Storage      int     `json:"storage"`
+	PricePerHour float64 `json:"price_per_hour"`
+}
+
+type Worker struct {
+	VPSID     int    `json:"vps_id"`
+	VPSName   string `json:"vps_name"`
+	VPSStatus string `json:"vps_status"`
+	K8sStatus string `json:"k8s_status"`
+	NodeName  string `json:"node_name"`
 }
 
 type apiClient struct {

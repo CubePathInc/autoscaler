@@ -36,15 +36,15 @@ type cubePathNodeGroup struct {
 }
 
 func (n *cubePathNodeGroup) MaxSize() int {
-	return n.nodePool.MaxSize
+	return n.nodePool.MaxNodes
 }
 
 func (n *cubePathNodeGroup) MinSize() int {
-	return n.nodePool.MinSize
+	return n.nodePool.MinNodes
 }
 
 func (n *cubePathNodeGroup) TargetSize() (int, error) {
-	return n.nodePool.Count, nil
+	return n.nodePool.DesiredNodes, nil
 }
 
 func (n *cubePathNodeGroup) IncreaseSize(delta int) error {
@@ -52,9 +52,9 @@ func (n *cubePathNodeGroup) IncreaseSize(delta int) error {
 		return fmt.Errorf("delta must be positive, have: %d", delta)
 	}
 
-	targetSize := n.nodePool.Count + delta
-	if targetSize > n.nodePool.MaxSize {
-		return fmt.Errorf("size increase too large: current %d desired %d max %d", n.nodePool.Count, targetSize, n.nodePool.MaxSize)
+	targetSize := n.nodePool.DesiredNodes + delta
+	if targetSize > n.nodePool.MaxNodes {
+		return fmt.Errorf("size increase too large: current %d desired %d max %d", n.nodePool.DesiredNodes, targetSize, n.nodePool.MaxNodes)
 	}
 
 	klog.V(4).Infof("Scaling node pool %s to %d", n.nodePool.UUID, targetSize)
@@ -63,7 +63,7 @@ func (n *cubePathNodeGroup) IncreaseSize(delta int) error {
 		return fmt.Errorf("failed to scale node pool %s: %v", n.nodePool.UUID, err)
 	}
 
-	n.nodePool.Count = targetSize
+	n.nodePool.DesiredNodes = targetSize
 	return nil
 }
 
@@ -89,7 +89,7 @@ func (n *cubePathNodeGroup) DeleteNodes(nodes []*apiv1.Node) error {
 			return fmt.Errorf("failed to delete node %s: %v", nodeID, err)
 		}
 
-		n.nodePool.Count--
+		n.nodePool.DesiredNodes--
 	}
 	return nil
 }
@@ -99,11 +99,11 @@ func (n *cubePathNodeGroup) ForceDeleteNodes(nodes []*apiv1.Node) error {
 }
 
 func (n *cubePathNodeGroup) DecreaseTargetSize(delta int) error {
-	targetSize := n.nodePool.Count + delta
-	if targetSize < n.nodePool.MinSize {
-		return fmt.Errorf("size decrease too small: current %d desired %d min %d", n.nodePool.Count, targetSize, n.nodePool.MinSize)
+	targetSize := n.nodePool.DesiredNodes + delta
+	if targetSize < n.nodePool.MinNodes {
+		return fmt.Errorf("size decrease too small: current %d desired %d min %d", n.nodePool.DesiredNodes, targetSize, n.nodePool.MinNodes)
 	}
-	n.nodePool.Count = targetSize
+	n.nodePool.DesiredNodes = targetSize
 	return nil
 }
 
@@ -112,15 +112,15 @@ func (n *cubePathNodeGroup) Id() string {
 }
 
 func (n *cubePathNodeGroup) Debug() string {
-	return fmt.Sprintf("node pool %s (min:%d max:%d count:%d)", n.nodePool.UUID, n.nodePool.MinSize, n.nodePool.MaxSize, n.nodePool.Count)
+	return fmt.Sprintf("node pool %s (min:%d max:%d desired:%d)", n.nodePool.UUID, n.nodePool.MinNodes, n.nodePool.MaxNodes, n.nodePool.DesiredNodes)
 }
 
 func (n *cubePathNodeGroup) Nodes() ([]cloudprovider.Instance, error) {
 	instances := make([]cloudprovider.Instance, 0, len(n.nodePool.Nodes))
-	for _, node := range n.nodePool.Nodes {
+	for _, worker := range n.nodePool.Nodes {
 		instances = append(instances, cloudprovider.Instance{
-			Id:     providerIDPrefix + node.ID,
-			Status: toInstanceStatus(node.Status),
+			Id:     providerIDPrefix + strconv.Itoa(worker.VPSID),
+			Status: toInstanceStatus(worker.K8sStatus),
 		})
 	}
 	return instances, nil
@@ -131,15 +131,15 @@ func (n *cubePathNodeGroup) TemplateNodeInfo() (*schedulerframework.NodeInfo, er
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("cubepath-%s-template", n.nodePool.UUID),
 			Labels: map[string]string{
-				apiv1.LabelInstanceType: n.nodePool.PlanSlug,
+				apiv1.LabelInstanceType: n.nodePool.Plan.Name,
 			},
 		},
 		Status: apiv1.NodeStatus{
 			Capacity: apiv1.ResourceList{
 				apiv1.ResourcePods:             *resource.NewQuantity(110, resource.DecimalSI),
-				apiv1.ResourceCPU:              *resource.NewQuantity(int64(n.nodePool.PlanVCPUs), resource.DecimalSI),
-				apiv1.ResourceMemory:           *resource.NewQuantity(int64(n.nodePool.PlanRAM)*1024*1024, resource.DecimalSI),
-				apiv1.ResourceEphemeralStorage: *resource.NewQuantity(int64(n.nodePool.PlanDisk)*1024*1024*1024, resource.DecimalSI),
+				apiv1.ResourceCPU:              *resource.NewQuantity(int64(n.nodePool.Plan.CPU), resource.DecimalSI),
+				apiv1.ResourceMemory:           *resource.NewQuantity(int64(n.nodePool.Plan.RAM)*1024*1024, resource.DecimalSI),
+				apiv1.ResourceEphemeralStorage: *resource.NewQuantity(int64(n.nodePool.Plan.Storage)*1024*1024*1024, resource.DecimalSI),
 			},
 			Conditions: cloudprovider.BuildReadyConditions(),
 		},
@@ -172,14 +172,14 @@ func (n *cubePathNodeGroup) GetOptions(defaults config.NodeGroupAutoscalingOptio
 	return nil, cloudprovider.ErrNotImplemented
 }
 
-func toInstanceStatus(status string) *cloudprovider.InstanceStatus {
+func toInstanceStatus(k8sStatus string) *cloudprovider.InstanceStatus {
 	st := &cloudprovider.InstanceStatus{}
-	switch status {
-	case "running":
+	switch k8sStatus {
+	case "ready":
 		st.State = cloudprovider.InstanceRunning
-	case "creating", "provisioning":
+	case "pending", "provisioning", "joining":
 		st.State = cloudprovider.InstanceCreating
-	case "deleting":
+	case "draining", "removed":
 		st.State = cloudprovider.InstanceDeleting
 	default:
 		st.State = cloudprovider.InstanceRunning

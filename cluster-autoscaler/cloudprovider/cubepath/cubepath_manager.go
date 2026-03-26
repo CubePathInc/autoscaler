@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -79,19 +80,20 @@ func (m *cubePathManager) Refresh() error {
 	return nil
 }
 
-func (m *cubePathManager) nodeGroupForNode(node *apiv1.Node) (*NodePool, *Node, error) {
+func (m *cubePathManager) nodeGroupForNode(node *apiv1.Node) (*NodePool, *Worker, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for _, pool := range m.nodePools {
-		for i, n := range pool.Nodes {
+		for i, w := range pool.Nodes {
 			if node.Spec.ProviderID != "" {
 				nodeID := strings.TrimPrefix(node.Spec.ProviderID, providerIDPrefix)
-				if n.ID == nodeID || n.ProviderID == node.Spec.ProviderID {
+				vpsIDStr := strconv.Itoa(w.VPSID)
+				if vpsIDStr == nodeID {
 					return pool, &pool.Nodes[i], nil
 				}
 			}
-			if n.Name == node.Name {
+			if w.NodeName == node.Name {
 				return pool, &pool.Nodes[i], nil
 			}
 		}
